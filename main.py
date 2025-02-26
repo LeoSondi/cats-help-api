@@ -2,8 +2,17 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Разрешенные домены
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешенные методы
+    allow_headers=["*"],  # Разрешенные заголовки
+)
 
 # Подключение к MongoDB
 client = AsyncIOMotorClient("mongodb://localhost:27017")
