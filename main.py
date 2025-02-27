@@ -4,6 +4,7 @@ from supabase import create_client, Client
 import os
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 
 # Загрузите переменные окружения из .env
 load_dotenv()
@@ -33,16 +34,21 @@ class Cat(BaseModel):
     color: str
     passport_url: str
 
+# Модель для ответа с id
+class CatResponse(Cat):
+    id: int
+
 # Роуты
-@app.post("/cats/", response_model=Cat)
+@app.post("/cats/", response_model=CatResponse)
 async def create_cat(cat: Cat):
     # Вставляем данные в таблицу "cats"
     data, count = supabase.table("cats").insert(cat.dict()).execute()
     if data:
+        # Возвращаем данные с id
         return data[1][0]
     raise HTTPException(status_code=500, detail="Failed to create cat")
 
-@app.get("/cats/{cat_id}", response_model=Cat)
+@app.get("/cats/{cat_id}", response_model=CatResponse)
 async def read_cat(cat_id: int):
     # Получаем кота по ID
     data, count = supabase.table("cats").select("*").eq("id", cat_id).execute()
@@ -50,7 +56,7 @@ async def read_cat(cat_id: int):
         return data[1][0]
     raise HTTPException(status_code=404, detail="Cat not found")
 
-@app.put("/cats/{cat_id}", response_model=Cat)
+@app.put("/cats/{cat_id}", response_model=CatResponse)
 async def update_cat(cat_id: int, cat: Cat):
     # Обновляем данные кота
     data, count = supabase.table("cats").update(cat.dict()).eq("id", cat_id).execute()
@@ -66,7 +72,7 @@ async def delete_cat(cat_id: int):
         return {"message": "Cat deleted"}
     raise HTTPException(status_code=404, detail="Cat not found")
 
-@app.get("/cats/", response_model=list[Cat])
+@app.get("/cats/", response_model=list[CatResponse])
 async def read_all_cats():
     # Получаем всех котов
     data, count = supabase.table("cats").select("*").execute()
