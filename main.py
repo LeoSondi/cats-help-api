@@ -1,8 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from motor.motor_asyncio import AsyncIOMotorClient
-from bson import ObjectId
+from supabase import create_client, Client
+import os
+from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+
+# Загрузите переменные окружения из .env
+load_dotenv()
 
 app = FastAPI()
 
@@ -14,10 +18,10 @@ app.add_middleware(
     allow_headers=["*"],  # Разрешенные заголовки
 )
 
-# Подключение к MongoDB
-client = AsyncIOMotorClient("mongodb://localhost:27017")
-db = client.catdb
-cats_collection = db.cats
+# Инициализация Supabase
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Модель для кота
 class Cat(BaseModel):
@@ -32,33 +36,38 @@ class Cat(BaseModel):
 # Роуты
 @app.post("/cats/", response_model=Cat)
 async def create_cat(cat: Cat):
-    cat_dict = cat.dict()
-    await cats_collection.insert_one(cat_dict)
-    return cat
+    # Вставляем данные в таблицу "cats"
+    data, count = supabase.table("cats").insert(cat.dict()).execute()
+    if data:
+        return data[1][0]
+    raise HTTPException(status_code=500, detail="Failed to create cat")
 
 @app.get("/cats/{cat_id}", response_model=Cat)
-async def read_cat(cat_id: str):
-    cat = await cats_collection.find_one({"_id": ObjectId(cat_id)})
-    if cat:
-        return cat
+async def read_cat(cat_id: int):
+    # Получаем кота по ID
+    data, count = supabase.table("cats").select("*").eq("id", cat_id).execute()
+    if data[1]:
+        return data[1][0]
     raise HTTPException(status_code=404, detail="Cat not found")
 
 @app.put("/cats/{cat_id}", response_model=Cat)
-async def update_cat(cat_id: str, cat: Cat):
-    await cats_collection.update_one({"_id": ObjectId(cat_id)}, {"$set": cat.dict()})
-    updated_cat = await cats_collection.find_one({"_id": ObjectId(cat_id)})
-    if updated_cat:
-        return updated_cat
+async def update_cat(cat_id: int, cat: Cat):
+    # Обновляем данные кота
+    data, count = supabase.table("cats").update(cat.dict()).eq("id", cat_id).execute()
+    if data[1]:
+        return data[1][0]
     raise HTTPException(status_code=404, detail="Cat not found")
 
 @app.delete("/cats/{cat_id}")
-async def delete_cat(cat_id: str):
-    result = await cats_collection.delete_one({"_id": ObjectId(cat_id)})
-    if result.deleted_count:
+async def delete_cat(cat_id: int):
+    # Удаляем кота по ID
+    data, count = supabase.table("cats").delete().eq("id", cat_id).execute()
+    if count[1]:
         return {"message": "Cat deleted"}
     raise HTTPException(status_code=404, detail="Cat not found")
 
 @app.get("/cats/", response_model=list[Cat])
 async def read_all_cats():
-    cats = await cats_collection.find().to_list(100)
-    return cats
+    # Получаем всех котов
+    data, count = supabase.table("cats").select("*").execute()
+    return data[1]
