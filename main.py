@@ -8,7 +8,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Разрешенные домены
+    allow_origins=["http://localhost:5173"],  # Разрешенные домены
     allow_credentials=True,
     allow_methods=["*"],  # Разрешенные методы
     allow_headers=["*"],  # Разрешенные заголовки
