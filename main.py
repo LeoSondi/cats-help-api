@@ -32,7 +32,6 @@ class Cat(BaseModel):
     avatar: str
     breed: str
     color: str
-    passport_url: str
 
 # Модель для ответа с id
 class CatResponse(Cat):
