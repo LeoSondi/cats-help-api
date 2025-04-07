@@ -65,11 +65,14 @@ async def update_cat(cat_id: int, cat: Cat):
 
 @app.delete("/cats/{cat_id}")
 async def delete_cat(cat_id: int):
-    # Удаляем кота по ID
-    data, count = supabase.table("cats").delete().eq("id", cat_id).execute()
-    if count[1]:
-        return {"message": "Cat deleted"}
-    raise HTTPException(status_code=404, detail="Cat not found")
+    # Проверяем, существует ли кот перед удалением
+    existing = supabase.table("cats").select("*").eq("id", cat_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Cat not found")
+
+    # Удаляем кота
+    supabase.table("cats").delete().eq("id", cat_id).execute()
+    return {"message": "Cat deleted successfully"}
 
 @app.get("/cats/", response_model=list[CatResponse])
 async def read_all_cats():
