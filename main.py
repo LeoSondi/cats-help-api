@@ -32,6 +32,7 @@ class Cat(BaseModel):
     avatar: str
     breed: str
     color: str
+    favorite: bool = False  # Добавлено новое поле
 
 # Модель для ответа с id
 class CatResponse(Cat):
@@ -78,4 +79,11 @@ async def delete_cat(cat_id: int):
 async def read_all_cats():
     # Получаем всех котов
     data, count = supabase.table("cats").select("*").execute()
+    return data[1]
+
+# Новая ручка для получения только избранных котов
+@app.get("/cats/favorites/", response_model=list[CatResponse])
+async def read_favorite_cats():
+    # Получаем только избранных котов
+    data, count = supabase.table("cats").select("*").eq("favorite", True).execute()
     return data[1]
